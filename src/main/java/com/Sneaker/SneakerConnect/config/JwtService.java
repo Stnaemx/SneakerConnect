@@ -1,27 +1,25 @@
 package com.Sneaker.SneakerConnect.config;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
 
     @Value("${SECRET_KEY}")
     private String SECRET_KEY;
-//    export SECRET_KEY=hf2xmOusSV1J7Tvj1HWTUttuLjThRyQw
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -32,7 +30,19 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    // Indirectly validates the token via extractUsername()
+    public Claims extractClaims(String access_token) {
+        return extractPayload(access_token);
+    }
+
+    public List<GrantedAuthority> extractRoles(Claims claims) {
+        List<String> roles = (List<String>) claims.get("Roles");
+
+        return roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+    }
+
+    // Indirectly validates the token signature via extractUsername()
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
         return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
@@ -43,7 +53,7 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        return generateToken(userDetails, new HashMap<>());
     }
 
     /*
@@ -52,10 +62,9 @@ public class JwtService {
     2: signature = HMACsha256(data, secretKey)
     3: token = header.payload.signature
      */
-    public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        // Create a Calendar instance and set it to the current date
+    public String generateToken(UserDetails userDetails, Map<String, List<String>> extraClaims) {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.HOUR_OF_DAY, 24); // Add 24 hours
+        calendar.add(Calendar.MINUTE, 15); // token expires in 15 mins
 
         return Jwts.builder()
                 .subject(userDetails.getUsername())

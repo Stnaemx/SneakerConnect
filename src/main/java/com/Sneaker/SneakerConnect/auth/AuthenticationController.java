@@ -2,6 +2,7 @@ package com.Sneaker.SneakerConnect.auth;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,14 +19,19 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthenticationResponseToken> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        AuthenticationResponseToken responseToken = authenticationService.register(registerRequest);
-        return ResponseEntity.ok(responseToken);
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        HttpHeaders headers = new HttpHeaders();
+        // add cookie to header
+        headers.add(HttpHeaders.SET_COOKIE, authenticationService.register(registerRequest).toString());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .build();
     }
 
     @PostMapping("/authenticate")
-    public ResponseEntity<AuthenticationResponseToken> authenticate(@Valid @RequestBody AuthenticationRequest authenticationRequest) {
-        AuthenticationResponseToken responseToken = authenticationService.authenticate(authenticationRequest);
+    public ResponseEntity<AuthenticationResponseTokenCookie> authenticate(@Valid @RequestBody AuthenticationRequest authenticationRequest) {
+        AuthenticationResponseTokenCookie responseToken = authenticationService.authenticate(authenticationRequest);
         return ResponseEntity.ok(responseToken);
     }
 }
