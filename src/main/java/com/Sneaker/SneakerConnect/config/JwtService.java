@@ -52,8 +52,8 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
-    public String generateToken(UserDetails userDetails) {
-        return generateToken(userDetails, new HashMap<>());
+    public String generateAccessToken(UserDetails userDetails) {
+        return generateAccessToken(userDetails, new HashMap<>());
     }
 
     /*
@@ -62,7 +62,7 @@ public class JwtService {
     2: signature = HMACsha256(data, secretKey)
     3: token = header.payload.signature
      */
-    public String generateToken(UserDetails userDetails, Map<String, List<String>> extraClaims) {
+    public String generateAccessToken(UserDetails userDetails, Map<String, List<String>> extraClaims) {
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.MINUTE, 15); // token expires in 15 mins
 

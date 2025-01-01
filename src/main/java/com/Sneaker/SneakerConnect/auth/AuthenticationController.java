@@ -21,8 +21,11 @@ public class AuthenticationController {
     @PostMapping("/register")
     public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
         HttpHeaders headers = new HttpHeaders();
-        // add cookie to header
-        headers.add(HttpHeaders.SET_COOKIE, authenticationService.register(registerRequest).toString());
+
+        // add each cookie individually
+        authenticationService.register(registerRequest).forEach(cookie -> {
+            headers.add(HttpHeaders.SET_COOKIE, cookie);
+        });
 
         return ResponseEntity.ok()
                 .headers(headers)

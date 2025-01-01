@@ -24,9 +24,10 @@ public class SecurityConfiguration {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
-                .csrf((csrf) -> csrf.disable()) // disabled (not good)
+                .csrf((csrf) -> csrf.disable()) // no sessions
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/redis/strings/**").permitAll()
 
 //                        .requestMatchers(HttpMethod.GET, "/api/v1/demo/**").hasRole(Role.OWNER.name())
                         .anyRequest().authenticated() // Protect all other endpoints

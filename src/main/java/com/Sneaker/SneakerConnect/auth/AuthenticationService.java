@@ -15,9 +15,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Duration;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,8 +28,10 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RefreshTokenService refreshTokenService;
 
-    public ResponseCookie register(RegisterRequest registerRequest) {
+    public List<String> register(RegisterRequest registerRequest) {
+        // create and save the user
         var user = User.builder()
                 .firstName(registerRequest.getFirstName())
                 .lastName(registerRequest.getLastName())
@@ -39,29 +40,46 @@ public class AuthenticationService {
                 .role(Role.OWNER)
                 .build();
         userRepository.save(user);
-        // set the security context for the current user
+
+        // set the security context for the current user via their email
         applicationConfig.setSecurityContext(new UsernamePasswordAuthenticationToken(user.getUsername(), null, user.getAuthorities()));
 
+        // prepare extra claims
         Map<String, List<String>> extraClaims = new HashMap<>();
+        String refreshToken = java.util.UUID.randomUUID().toString();
+
+        // Add roles as extra claims by transforming getAuthorities() into a List
         extraClaims.put("Roles", user.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList())
         );
 
-        return ResponseCookie.from("access_token", jwtService.generateToken(user, extraClaims))
-                .maxAge(900) // cookie expiration time in seconds
+        // add refresh token expiration time
+        extraClaims.put("refresh_token_expire", Collections.singletonList(refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken)));
+
+        // generate cookies
+        String accessTokenCookie = generateCookie("access_token", jwtService.generateAccessToken(user, extraClaims), Duration.ofSeconds(15));
+        String refreshTokenCookie = generateCookie("refresh_token", refreshToken, Duration.ofDays(30));
+        return List.of(accessTokenCookie, refreshTokenCookie);
+    }
+
+    private String generateCookie(String key, String value, Duration expirationTime) {
+        ResponseCookie cookie = ResponseCookie.from(key, value)
+                .maxAge(expirationTime)
                 .httpOnly(true)
                 .secure(true)
                 .sameSite("Strict")
                 .path("/")
                 .build();
+
+        return cookie.toString();
     }
 
     public AuthenticationResponseTokenCookie authenticate(AuthenticationRequest authenticationRequest) {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(), authenticationRequest.getPassword()));
         var user = (UserDetails) authentication.getPrincipal();
-        var jwtToken = jwtService.generateToken(user);
+        var jwtToken = jwtService.generateAccessToken(user);
         return AuthenticationResponseTokenCookie.builder().token(jwtToken).build();
     }
 }
