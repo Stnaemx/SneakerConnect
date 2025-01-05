@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -25,17 +24,19 @@ public class RefreshTokenService {
             Duration duration = Duration.ofDays(30L);
             redisTemplate.opsForValue().set(UUID, "1", duration); // token valid for 30 days
 
-            // calculate the timestamp 30 days ahead
+            // calculate the timestamp 30 days ahead in Epoch seconds
             long timestamp30DaysAhead = Instant.now()
                     .plus(30, ChronoUnit.DAYS)
                     .getEpochSecond();
 
+            // return refresh token expiration time
             return String.valueOf(timestamp30DaysAhead);
         } catch (RedisSystemException e) {
             throw new RuntimeException("Failed to store refresh token", e);
         }
     }
 
+    // not used as it requires a redis call
     public boolean keyExist(String refreshToken) {
         if(refreshToken == null || refreshToken.isEmpty()) {
             return false;

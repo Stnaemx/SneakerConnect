@@ -14,7 +14,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,6 +29,7 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
 
+    // Register the user and returns a list of cookies to be returned in HTTP response
     public List<String> register(RegisterRequest registerRequest) {
         // create and save the user
         var user = User.builder()
@@ -44,22 +44,42 @@ public class AuthenticationService {
         // set the security context for the current user via their email
         applicationConfig.setSecurityContext(new UsernamePasswordAuthenticationToken(user.getUsername(), null, user.getAuthorities()));
 
-        // prepare extra claims
-        Map<String, List<String>> extraClaims = new HashMap<>();
+        // generate a list of tokens (access and refresh tokens)
+        return generateAccessAndRefreshCookies(user);
+    }
+
+    public List<String> authenticate(AuthenticationRequest authenticationRequest) {
+        // authenticationManager will use the daoAuthProvider bean to authenticate user
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(), authenticationRequest.getPassword()));
+        // set the security context for the current user via their email
+        applicationConfig.setSecurityContext(authentication);
+
+        var user = (UserDetails) authentication.getPrincipal();
+
+        // return a list of both tokens
+        return generateAccessAndRefreshCookies(user);
+    }
+
+    // Authenticate the user and returns a list of cookies to be returned in HTTP response
+    public List<String> generateAccessAndRefreshCookies(UserDetails user) {
+        // prepare extra claims (refresh token's exp time)
+        Map<String, Object> extraClaims = new HashMap<>();
         String refreshToken = java.util.UUID.randomUUID().toString();
 
         // Add roles as extra claims by transforming getAuthorities() into a List
-        extraClaims.put("Roles", user.getAuthorities()
+        extraClaims.put("roles", user.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList())
         );
 
-        // add refresh token expiration time
-        extraClaims.put("refresh_token_expire", Collections.singletonList(refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken)));
+        // add refresh token expiration time to claims
+        extraClaims.put("refreshTokenExpiration", refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken));
+        // this uses List<String>
+//        extraClaims.put("refreshTokenExpiration", Collections.singletonList(refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken)));
 
         // generate cookies
-        String accessTokenCookie = generateCookie("access_token", jwtService.generateAccessToken(user, extraClaims), Duration.ofSeconds(15));
+        String accessTokenCookie = generateCookie("access_token", jwtService.generateAccessToken(user.getUsername(), extraClaims), Duration.ofMinutes(15));
         String refreshTokenCookie = generateCookie("refresh_token", refreshToken, Duration.ofDays(30));
         return List.of(accessTokenCookie, refreshTokenCookie);
     }
@@ -74,12 +94,5 @@ public class AuthenticationService {
                 .build();
 
         return cookie.toString();
-    }
-
-    public AuthenticationResponseTokenCookie authenticate(AuthenticationRequest authenticationRequest) {
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(), authenticationRequest.getPassword()));
-        var user = (UserDetails) authentication.getPrincipal();
-        var jwtToken = jwtService.generateAccessToken(user);
-        return AuthenticationResponseTokenCookie.builder().token(jwtToken).build();
     }
 }

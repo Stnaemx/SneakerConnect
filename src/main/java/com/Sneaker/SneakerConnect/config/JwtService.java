@@ -21,8 +21,12 @@ public class JwtService {
     @Value("${SECRET_KEY}")
     private String SECRET_KEY;
 
-    public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+    public String extractUsername(String accessToken) {
+        return extractClaim(accessToken, Claims::getSubject);
+    }
+
+    public Date extractAccessTokenExpiration(String accessToken) {
+        return extractClaim(accessToken, Claims::getExpiration);
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
@@ -30,12 +34,12 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public Claims extractClaims(String access_token) {
-        return extractPayload(access_token);
+    public Claims extractAllClaims(String accessToken) {
+        return extractPayload(accessToken);
     }
 
     public List<GrantedAuthority> extractRoles(Claims claims) {
-        List<String> roles = (List<String>) claims.get("Roles");
+        List<String> roles = (List<String>) claims.get("roles");
 
         return roles.stream()
                 .map(SimpleGrantedAuthority::new)
@@ -52,8 +56,9 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration).before(new Date());
     }
 
-    public String generateAccessToken(UserDetails userDetails) {
-        return generateAccessToken(userDetails, new HashMap<>());
+    // access token without any claims
+    public String generateAccessToken(String userEmail) {
+        return generateAccessToken(userEmail, new HashMap<>());
     }
 
     /*
@@ -62,15 +67,15 @@ public class JwtService {
     2: signature = HMACsha256(data, secretKey)
     3: token = header.payload.signature
      */
-    public String generateAccessToken(UserDetails userDetails, Map<String, List<String>> extraClaims) {
+    public String generateAccessToken(String userEmail, Object extraClaims) {
         Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.MINUTE, 15); // token expires in 15 mins
+        calendar.add(Calendar.MINUTE, 15); // token expires in 15 minutes
 
         return Jwts.builder()
-                .subject(userDetails.getUsername())
+                .subject(userEmail)
                 .issuedAt(new Date())
                 .expiration(calendar.getTime())
-                .claims(extraClaims)
+                .claims((Map<String, ?>) extraClaims)
                 .signWith(getSigningKey())
                 .compact();
     }
