@@ -1,8 +1,7 @@
 package com.Sneaker.SneakerConnect.config;
 
 import com.Sneaker.SneakerConnect.auth.RefreshTokenService;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
+import com.Sneaker.SneakerConnect.user.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -13,7 +12,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -28,6 +29,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final ApplicationConfig applicationConfig;
     private final RefreshTokenService refreshTokenService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
@@ -41,44 +43,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String refreshToken = tokenMap.get("refresh_token");
 
         // verify tokens are included
-        if (accessToken == null || refreshToken == null) {
-            respondWithUnauthorized(response, "Access or refresh token missing.");
+        if(refreshToken == null) {
+            respondWithUnauthorized(response, "Refresh token missing.");
             return;
         }
 
         System.out.println("acc: "+accessToken);
         System.out.println("ref: "+refreshToken);
-        Claims tokenClaims = null;
-        try {
-            tokenClaims = jwtService.extractAllClaims(accessToken);
-        } catch (JwtException e) {
-            respondWithUnauthorized(response, "Invalid or expired access token.");
+
+        String userEmail = null;
+        UserDetails user = null;
+
+        boolean refreshTokenExpired = !refreshTokenService.keyExist(refreshToken);
+
+        /* 2 cases
+        1. access token expired
+        2. refresh token has expired
+         */
+        if(refreshTokenExpired) {
+            // modify response and continue filter chain
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            filterChain.doFilter(request, response);
             return;
         }
-
-        Date accessTokenExp = tokenClaims.getExpiration();
-        boolean accessTokenExpired = accessTokenExp.before(new Date());
-        String userEmail = tokenClaims.getSubject();
-
-        String refreshTokenExpiration = tokenClaims.get("refreshTokenExpiration", String.class);
-        boolean refreshTokenExpired = isRefreshTokenExpired(Long.parseLong(refreshTokenExpiration));
-        List<String> userRoles = tokenClaims.get("roles", List.class);
-
-        // access token refresh based refresh token expiration
-        if(accessTokenExpired) {
-            // both tokens are expired
-            if(refreshTokenExpired) {
-                // modify response
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-
-                // continue filter chain
-                filterChain.doFilter(request, response);
-                return;
-            }
-            // just the access token is expired: meaning refresh the access token
-            else {
-                refreshAccessToken(response, userEmail, userRoles, refreshTokenExpiration);
-            }
+        else if(accessToken == null) {  // begin refresh token process
+            userEmail = refreshTokenService.getUserEmail(refreshToken); // retrieve user from redis
+            user = customUserDetailsService.loadUserByUsername(userEmail);
+            // updates the http response with a new access token
+            refreshAccessToken(response, userEmail, user.getAuthorities());
         }
 
         // sets the security context for current user
@@ -88,7 +80,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     userEmail,
                     null,
-                    jwtService.extractRoles(tokenClaims)
+                    user.getAuthorities()
             );
             // pass additional metadata to token
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -108,20 +100,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return cookieMap;
     }
 
-    private boolean isRefreshTokenExpired(long tokenExp) {
-        // convert to epoch time in seconds
-        return System.currentTimeMillis()/1000 >= tokenExp;
-    }
-
     private void respondWithUnauthorized(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.getWriter().write(message);
     }
 
-    private void refreshAccessToken(HttpServletResponse response, String userEmail, List<String> userRoles, String refreshTokenExpiration) {
+    private void refreshAccessToken(HttpServletResponse response, String userEmail, Collection<? extends GrantedAuthority> userRoles) {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("roles", userRoles);
-        extraClaims.put("refreshTokenExpiration", refreshTokenExpiration);
 
         String newAccessToken = jwtService.generateAccessToken(userEmail, extraClaims);
 
@@ -133,5 +119,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        // specify the endpoints to skip
+        return path.startsWith("/api/v1/auth");
     }
 }

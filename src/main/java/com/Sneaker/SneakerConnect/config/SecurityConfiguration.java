@@ -29,7 +29,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/redis/strings/**").permitAll()
 
 //                        .requestMatchers(HttpMethod.GET, "/api/v1/demo/**").hasRole(Role.OWNER.name())
-                        .anyRequest().authenticated() // Protect all other endpoints
+                        .anyRequest().authenticated() // all other endpoints requires authenticated users
                 )
                 .sessionManagement(session -> session // specify we don't want to store sessions (securityContext)
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Stateless session for JWT

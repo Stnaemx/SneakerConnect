@@ -27,10 +27,10 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final RefreshTokenService refreshTokenService;
 
     // Register the user and returns a list of cookies to be returned in HTTP response
     public List<String> register(RegisterRequest registerRequest) {
+        // TODO: check if the usr exist or not
         // create and save the user
         var user = User.builder()
                 .firstName(registerRequest.getFirstName())
@@ -73,11 +73,6 @@ public class AuthenticationService {
                 .collect(Collectors.toList())
         );
 
-        // add refresh token expiration time to claims
-        extraClaims.put("refreshTokenExpiration", refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken));
-        // this uses List<String>
-//        extraClaims.put("refreshTokenExpiration", Collections.singletonList(refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken)));
-
         // generate cookies
         String accessTokenCookie = generateCookie("access_token", jwtService.generateAccessToken(user.getUsername(), extraClaims), Duration.ofMinutes(15));
         String refreshTokenCookie = generateCookie("refresh_token", refreshToken, Duration.ofDays(30));
@@ -92,7 +87,6 @@ public class AuthenticationService {
                 .sameSite("Strict")
                 .path("/")
                 .build();
-
         return cookie.toString();
     }
 }

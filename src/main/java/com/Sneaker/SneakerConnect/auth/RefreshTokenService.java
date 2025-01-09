@@ -14,7 +14,7 @@ public class RefreshTokenService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    public String createAndStoreRefreshTokenWithExpiration(String UUID) {
+    public String createAndStoreRefreshTokenWithExpiration(String UUID, String userEmail) {
         if(UUID == null || UUID.isEmpty()) {
             throw new IllegalArgumentException("UUID must not be null or empty");
         }
@@ -22,7 +22,7 @@ public class RefreshTokenService {
         // store refresh token with a 30 day TTL
         try {
             Duration duration = Duration.ofDays(30L);
-            redisTemplate.opsForValue().set(UUID, "1", duration); // token valid for 30 days
+            redisTemplate.opsForValue().set(UUID, "userEmail", duration); // token valid for 30 days
 
             // calculate the timestamp 30 days ahead in Epoch seconds
             long timestamp30DaysAhead = Instant.now()
@@ -42,5 +42,15 @@ public class RefreshTokenService {
             return false;
         }
         return Boolean.TRUE.equals(redisTemplate.hasKey(refreshToken));
+    }
+
+    public String getUserEmail(String UUID) {
+        return redisTemplate.opsForValue().get(UUID); // token valid for
+    }
+
+    public String getExpireTime(String UUID) {
+        long currentTime = Instant.now().getEpochSecond();
+        long expireTime = redisTemplate.getExpire(UUID);
+        return String.valueOf(currentTime + expireTime);
     }
 }
