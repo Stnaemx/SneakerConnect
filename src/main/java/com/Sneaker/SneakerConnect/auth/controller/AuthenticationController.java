@@ -1,5 +1,8 @@
-package com.Sneaker.SneakerConnect.auth;
+package com.Sneaker.SneakerConnect.auth.controller;
 
+import com.Sneaker.SneakerConnect.auth.dto.AuthenticationRequest;
+import com.Sneaker.SneakerConnect.auth.service.AuthenticationService;
+import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -20,8 +23,13 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        return buildResponseWithCookies(authenticationService.register(registerRequest));
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        try {
+            return buildResponseWithCookies(authenticationService.register(registerRequest));
+        }
+        catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @PostMapping("/authenticate")

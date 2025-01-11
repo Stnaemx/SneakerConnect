@@ -1,6 +1,6 @@
-package com.Sneaker.SneakerConnect;
+package com.Sneaker.SneakerConnect.repository;
 
-import com.Sneaker.SneakerConnect.user.User;
+import com.Sneaker.SneakerConnect.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

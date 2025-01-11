@@ -1,4 +1,4 @@
-package com.Sneaker.SneakerConnect.auth;
+package com.Sneaker.SneakerConnect.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.RedisSystemException;
@@ -14,7 +14,7 @@ public class RefreshTokenService {
 
     private final RedisTemplate<String, String> redisTemplate;
 
-    public String createAndStoreRefreshTokenWithExpiration(String UUID, String userEmail) {
+    public void createAndStoreRefreshTokenWithExpiration(String UUID, String userEmail) {
         if(UUID == null || UUID.isEmpty()) {
             throw new IllegalArgumentException("UUID must not be null or empty");
         }
@@ -22,7 +22,7 @@ public class RefreshTokenService {
         // store refresh token with a 30 day TTL
         try {
             Duration duration = Duration.ofDays(30L);
-            redisTemplate.opsForValue().set(UUID, "userEmail", duration); // token valid for 30 days
+            redisTemplate.opsForValue().set(UUID, userEmail, duration); // token valid for 30 days
 
             // calculate the timestamp 30 days ahead in Epoch seconds
             long timestamp30DaysAhead = Instant.now()
@@ -30,7 +30,7 @@ public class RefreshTokenService {
                     .getEpochSecond();
 
             // return refresh token expiration time
-            return String.valueOf(timestamp30DaysAhead);
+//            return String.valueOf(timestamp30DaysAhead);
         } catch (RedisSystemException e) {
             throw new RuntimeException("Failed to store refresh token", e);
         }
@@ -45,7 +45,7 @@ public class RefreshTokenService {
     }
 
     public String getUserEmail(String UUID) {
-        return redisTemplate.opsForValue().get(UUID); // token valid for
+        return redisTemplate.opsForValue().get(UUID);
     }
 
     public String getExpireTime(String UUID) {

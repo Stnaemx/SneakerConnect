@@ -1,6 +1,6 @@
-package com.Sneaker.SneakerConnect.user;
+package com.Sneaker.SneakerConnect.entity;
 
-import com.Sneaker.SneakerConnect.Role;
+import com.Sneaker.SneakerConnect.user.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,16 +9,18 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity(name = "_user")
+@Entity(name = "users")
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue()
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String firstName;
     private String lastName;
@@ -27,6 +29,9 @@ public class User implements UserDetails {
 
     @Enumerated(EnumType.STRING)
     private Role role;
+
+    @OneToMany(mappedBy = "user")
+    private Set<UsersShop> usersShops = new HashSet<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -1,6 +1,6 @@
 package com.Sneaker.SneakerConnect.config;
 
-import com.Sneaker.SneakerConnect.user.CustomUserDetailsService;
+import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,7 +1,7 @@
 package com.Sneaker.SneakerConnect.config;
 
-import com.Sneaker.SneakerConnect.auth.RefreshTokenService;
-import com.Sneaker.SneakerConnect.user.CustomUserDetailsService;
+import com.Sneaker.SneakerConnect.auth.service.RefreshTokenService;
+import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;

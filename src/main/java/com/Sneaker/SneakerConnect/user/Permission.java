@@ -1,4 +1,4 @@
-package com.Sneaker.SneakerConnect;
+package com.Sneaker.SneakerConnect.user;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

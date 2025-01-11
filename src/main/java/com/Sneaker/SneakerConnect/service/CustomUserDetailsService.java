@@ -1,6 +1,7 @@
-package com.Sneaker.SneakerConnect.user;
+package com.Sneaker.SneakerConnect.service;
 
-import com.Sneaker.SneakerConnect.UserRepository;
+import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
+import com.Sneaker.SneakerConnect.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
