@@ -1,5 +1,6 @@
 package com.Sneaker.SneakerConnect.auth.controller;
 
+import com.Sneaker.SneakerConnect.DtoValidator;
 import com.Sneaker.SneakerConnect.auth.dto.AuthenticationRequest;
 import com.Sneaker.SneakerConnect.auth.service.AuthenticationService;
 import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
@@ -20,10 +21,15 @@ import java.util.List;
 @Validated
 public class AuthenticationController {
 
+    private final DtoValidator<RegisterRequest> registerRequestDtoValidator;
+    private final DtoValidator<AuthenticationRequest> authenticationRequestDtoValidator;
     private final AuthenticationService authenticationService;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest registerRequest) {
+        // validate dto and return message to uRser if any fields are missing
+        registerRequestDtoValidator.validate(registerRequest);
+
         try {
             return buildResponseWithCookies(authenticationService.register(registerRequest));
         }
@@ -34,6 +40,8 @@ public class AuthenticationController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<Void> authenticate(@Valid @RequestBody AuthenticationRequest authenticationRequest) {
+        authenticationRequestDtoValidator.validate(authenticationRequest);
+
         return buildResponseWithCookies(authenticationService.authenticate(authenticationRequest));
     }
 

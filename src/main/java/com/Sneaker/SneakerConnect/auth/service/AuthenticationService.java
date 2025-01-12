@@ -1,5 +1,6 @@
 package com.Sneaker.SneakerConnect.auth.service;
 
+import com.Sneaker.SneakerConnect.DtoValidator;
 import com.Sneaker.SneakerConnect.entity.Shop;
 import com.Sneaker.SneakerConnect.entity.UsersShop;
 import com.Sneaker.SneakerConnect.repository.ShopRepository;
@@ -37,6 +38,8 @@ public class AuthenticationService {
     private final RefreshTokenService refreshTokenService;
     private final ShopRepository shopRepository;
     private final UsersShopRepository usersShopRepository;
+    private final DtoValidator<RegisterRequest> registerRequestDtoValidator;
+    private final DtoValidator<AuthenticationRequest> authenticationRequestDtoValidator;
 
     // Register the user and returns a list of cookies to be returned in HTTP response
     public List<String> register(RegisterRequest registerRequest) {
