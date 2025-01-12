@@ -3,8 +3,10 @@ package com.Sneaker.SneakerConnect.auth.service;
 import com.Sneaker.SneakerConnect.DtoValidator;
 import com.Sneaker.SneakerConnect.entity.Shop;
 import com.Sneaker.SneakerConnect.entity.UsersShop;
+import com.Sneaker.SneakerConnect.exceptions.UserAlreadyExistsException;
 import com.Sneaker.SneakerConnect.repository.ShopRepository;
 import com.Sneaker.SneakerConnect.repository.UsersShopRepository;
+import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
 import com.Sneaker.SneakerConnect.user.Role;
 import com.Sneaker.SneakerConnect.repository.UserRepository;
 import com.Sneaker.SneakerConnect.auth.dto.AuthenticationRequest;
@@ -38,17 +40,16 @@ public class AuthenticationService {
     private final RefreshTokenService refreshTokenService;
     private final ShopRepository shopRepository;
     private final UsersShopRepository usersShopRepository;
-    private final DtoValidator<RegisterRequest> registerRequestDtoValidator;
-    private final DtoValidator<AuthenticationRequest> authenticationRequestDtoValidator;
 
     // Register the user and returns a list of cookies to be returned in HTTP response
     public List<String> register(RegisterRequest registerRequest) {
-        Optional<Shop> existingShop = shopRepository.findByName(registerRequest.getShopName());
+        Optional<Shop> existingShop = shopRepository.findByNameOrAddress(registerRequest.getShopName(), registerRequest.getAddress());
+        Optional<User> existingUser = userRepository.findByEmail(registerRequest.getEmail());
 
-        // franchises creation cannot be done during sign up
-        if(existingShop.isPresent()) {
-            throw new IllegalArgumentException("A shop with the name '"
-                    + registerRequest.getShopName() + "' already exists. Please choose a different name.");
+        // franchise creation cannot be done during sign up
+        // exception will be handled by controller handler
+        if(existingShop.isPresent() || existingUser.isPresent()) {
+            throw new UserAlreadyExistsException("User or shop already exists. Please choose a different name.");
         }
 
         // create and save the user
@@ -106,6 +107,7 @@ public class AuthenticationService {
         refreshTokenService.createAndStoreRefreshTokenWithExpiration(refreshToken, user.getUsername());
 
         // Add roles as extra claims by transforming getAuthorities() into a List
+        // TODO roles will be sent via http response body instead
         extraClaims.put("roles", user.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
