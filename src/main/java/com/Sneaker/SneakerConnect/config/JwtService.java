@@ -21,6 +21,13 @@ public class JwtService {
     @Value("${SECRET_KEY}")
     private String SECRET_KEY;
 
+    @Value("${SENDGRID_API_KEY}")
+    private String SENDGRID_API_KEY;
+
+    public String getApi() {
+        return SENDGRID_API_KEY;
+    }
+
     public String extractUsername(String accessToken) {
         return extractClaim(accessToken, Claims::getSubject);
     }

@@ -2,9 +2,11 @@ package com.Sneaker.SneakerConnect.auth.controller;
 
 import com.Sneaker.SneakerConnect.DtoValidator;
 import com.Sneaker.SneakerConnect.auth.dto.AuthenticationRequest;
+import com.Sneaker.SneakerConnect.auth.dto.UserCreationDto;
 import com.Sneaker.SneakerConnect.auth.service.AuthenticationService;
-import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
+import com.Sneaker.SneakerConnect.entity.userCreation.dto.OwnerCreationDto;
 import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
+import com.Sneaker.SneakerConnect.user.Role;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -26,18 +28,34 @@ import java.util.stream.Collectors;
 @Validated
 public class AuthenticationController {
 
-    private final DtoValidator<RegisterRequest> registerRequestDtoValidator;
+    private final DtoValidator<OwnerCreationDto> ownerCreationDtoDtoValidator;
     private final DtoValidator<AuthenticationRequest> authenticationRequestDtoValidator;
     private final AuthenticationService authenticationService;
     private final CustomUserDetailsService customUserDetailsService;
 
     @PostMapping("/register")
-    public ResponseEntity<List<String>> register(@RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<List<String>> registerOwner(@RequestBody OwnerCreationDto ownerCreationDto) {
         // validate dto and return message to user if any fields are missing
-        registerRequestDtoValidator.validate(registerRequest);
+        ownerCreationDtoDtoValidator.validate(ownerCreationDto);
 
-        return buildResponseWithCookies(authenticationService.register(registerRequest), registerRequest.getEmail());
+        return buildResponseWithCookies(authenticationService.register(ownerCreationDto, Role.OWNER), ownerCreationDto.getEmail());
     }
+
+//    @PostMapping("/register/user")
+//    public<T extends UserCreationDto> ResponseEntity<List<String>> registerUser(@RequestBody T UserCreationDto) {
+//        dtoValidator.validate(UserCreationDto);
+//
+//        return buildResponseWithCookies(authenticationService.register(UserCreationDto, Role.USER), UserCreationDto.getEmail());
+//    }
+
+//
+//    @PostMapping("/register/employee")
+//    public ResponseEntity<List<String>> registerEmployee(@RequestBody RegisterRequest registerRequest) {
+//        // validate dto and return message to user if any fields are missing
+//        ownerCreationDtoDtoValidator.validate(registerRequest);
+//
+//        return buildResponseWithCookies(authenticationService.register(registerRequest, Role.EMPLOYEE), registerRequest.getEmail());
+//    }
 
     @PostMapping("/authenticate")
     public ResponseEntity<List<String>> authenticate(@Valid @RequestBody AuthenticationRequest authenticationRequest) {

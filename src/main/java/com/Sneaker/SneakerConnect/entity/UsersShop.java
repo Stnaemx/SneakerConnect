@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
+import lombok.NoArgsConstructor;
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,7 +17,7 @@ public class UsersShop {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Boolean isOwner;
-    private String email;
+    private String userEmail;
 
     @ManyToOne
     @JoinColumn(name = "shop_id", nullable = false)

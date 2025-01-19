@@ -1,19 +1,16 @@
 package com.Sneaker.SneakerConnect.auth.service;
 
-import com.Sneaker.SneakerConnect.DtoValidator;
-import com.Sneaker.SneakerConnect.entity.Shop;
-import com.Sneaker.SneakerConnect.entity.UsersShop;
-import com.Sneaker.SneakerConnect.exceptions.UserAlreadyExistsException;
-import com.Sneaker.SneakerConnect.repository.ShopRepository;
+import com.Sneaker.SneakerConnect.auth.dto.UserCreationDto;
+import com.Sneaker.SneakerConnect.entity.*;
+import com.Sneaker.SneakerConnect.entity.userCreation.UserCreationStrategy;
+import com.Sneaker.SneakerConnect.entity.userCreation.UserCreationStrategyFactory;
 import com.Sneaker.SneakerConnect.repository.UsersShopRepository;
-import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
-import com.Sneaker.SneakerConnect.user.Role;
-import com.Sneaker.SneakerConnect.repository.UserRepository;
 import com.Sneaker.SneakerConnect.auth.dto.AuthenticationRequest;
-import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
 import com.Sneaker.SneakerConnect.config.ApplicationConfig;
 import com.Sneaker.SneakerConnect.config.JwtService;
-import com.Sneaker.SneakerConnect.entity.User;
+import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
+import com.Sneaker.SneakerConnect.service.ShopService;
+import com.Sneaker.SneakerConnect.user.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,10 +18,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,50 +28,30 @@ import java.util.stream.Collectors;
 public class AuthenticationService {
 
     private final ApplicationConfig applicationConfig;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
-    private final ShopRepository shopRepository;
     private final UsersShopRepository usersShopRepository;
+    private final UserShopFactory userShopFactory;
+    private final UserCreationStrategyFactory userCreationStrategyFactory;
+    private final ShopService shopService;
+    private final CustomUserDetailsService customUserDetailsService;
 
     // Register the user and returns a list of cookies to be returned in HTTP response
-    public List<String> register(RegisterRequest registerRequest) {
-        Optional<Shop> existingShop = shopRepository.findByNameOrAddress(registerRequest.getShopName(), registerRequest.getAddress());
-        Optional<User> existingUser = userRepository.findByEmail(registerRequest.getEmail());
+    public <T extends UserCreationDto> List<String> register(T registerRequest, Role role) {
 
-        // franchise creation cannot be done during sign up
-        // exception will be handled by controller handler
-        if(existingShop.isPresent() || existingUser.isPresent()) {
-            throw new UserAlreadyExistsException("User or shop already exists. Please choose a different name.");
-        }
+        // dynamically decide which user creation strategy (implementation class) to use
+        UserCreationStrategy<T> strategy = userCreationStrategyFactory.getStrategy(role);
+        User user = strategy.createUser(registerRequest);
+        Shop shop = shopService.resolveShop(registerRequest, user.getRole());
 
-        // create and save the user
-        var user = User.builder()
-                .firstName(registerRequest.getFirstName())
-                .lastName(registerRequest.getLastName())
-                .email(registerRequest.getEmail())
-                .password(passwordEncoder.encode(registerRequest.getPassword()))
-                .role(Role.OWNER)
-                .build();
+        // set the isOwner field in the join table to indicate if the created user is the shop owner
+        boolean isOwner = user.getRole() == Role.OWNER;
+        UsersShop usersShop = userShopFactory.createUserShop(registerRequest, user, shop, isOwner);
 
-        var shop = Shop.builder()
-                .name(registerRequest.getShopName())
-                .address(registerRequest.getAddress())
-                .timestamp(LocalDateTime.now())
-                .build();
-
-        var usersShop = UsersShop.builder()
-                .isOwner(true)
-                .email(registerRequest.getEmail())
-                .user(user)
-                .shop(shop)
-                .build();
-
-        userRepository.save(user);
-        shopRepository.save(shop);
-        usersShopRepository.save(usersShop);
+        // both user and shop must exist prior to populating the join table
+        customUserDetailsService.saveUser(user);
+        usersShopRepository.save(usersShop); // join table
 
         // set the security context for the current user via their email
         applicationConfig.setSecurityContext(new UsernamePasswordAuthenticationToken(user.getUsername(), null, user.getAuthorities()));

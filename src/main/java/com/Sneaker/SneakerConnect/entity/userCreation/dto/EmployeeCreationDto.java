@@ -1,6 +1,6 @@
-package com.Sneaker.SneakerConnect.auth.dto;
+package com.Sneaker.SneakerConnect.entity.userCreation.dto;
 
-import com.Sneaker.SneakerConnect.user.Role;
+import com.Sneaker.SneakerConnect.auth.dto.UserCreationDto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterRequest {
+public class EmployeeCreationDto implements UserCreationDto {
 
     // user info
     @NotBlank(message = "firstName is blank")
@@ -29,7 +29,4 @@ public class RegisterRequest {
     // shop info
     @NotBlank(message = "shopName is blank")
     private String shopName;
-
-    @NotBlank(message = "address is blank")
-    private String address;
 }

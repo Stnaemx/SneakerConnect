@@ -1,6 +1,5 @@
 package com.Sneaker.SneakerConnect.auth.dto;
 
-import com.Sneaker.SneakerConnect.user.Role;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegisterRequest {
+public class RegisterUser {
 
     // user info
     @NotBlank(message = "firstName is blank")
@@ -25,11 +24,4 @@ public class RegisterRequest {
 
     @NotBlank(message = "password is blank")
     private String password;
-
-    // shop info
-    @NotBlank(message = "shopName is blank")
-    private String shopName;
-
-    @NotBlank(message = "address is blank")
-    private String address;
 }

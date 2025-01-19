@@ -1,5 +1,6 @@
 package com.Sneaker.SneakerConnect.entity;
 
+import com.Sneaker.SneakerConnect.auth.dto.RegisterRequest;
 import com.Sneaker.SneakerConnect.user.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
