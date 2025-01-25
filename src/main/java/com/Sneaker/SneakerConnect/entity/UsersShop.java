@@ -1,5 +1,6 @@
 package com.Sneaker.SneakerConnect.entity;
 
+import com.Sneaker.SneakerConnect.user.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,9 @@ public class UsersShop {
     private Long id;
     private Boolean isOwner;
     private String userEmail;
+
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     @ManyToOne
     @JoinColumn(name = "shop_id", nullable = false)

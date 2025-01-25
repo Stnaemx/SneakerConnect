@@ -39,7 +39,6 @@ public class AuthenticationService {
 
     // Register the user and returns a list of cookies to be returned in HTTP response
     public <T extends UserCreationDto> List<String> register(T registerRequest, Role role) {
-
         // dynamically decide which user creation strategy (implementation class) to use
         UserCreationStrategy<T> strategy = userCreationStrategyFactory.getStrategy(role);
         User user = strategy.createUser(registerRequest);
@@ -47,10 +46,12 @@ public class AuthenticationService {
 
         // set the isOwner field in the join table to indicate if the created user is the shop owner
         boolean isOwner = user.getRole() == Role.OWNER;
-        UsersShop usersShop = userShopFactory.createUserShop(registerRequest, user, shop, isOwner);
+        UsersShop usersShop = userShopFactory.createUserShop(registerRequest, user, shop, isOwner, role);
 
-        // both user and shop must exist prior to populating the join table
+        // both user and shop must exist prior to populating storing an entry to the join table
+        // creates a new entry in UsersShop join table. This associates a user to a shop
         customUserDetailsService.saveUser(user);
+        // TODO: move to a service
         usersShopRepository.save(usersShop); // join table
 
         // set the security context for the current user via their email

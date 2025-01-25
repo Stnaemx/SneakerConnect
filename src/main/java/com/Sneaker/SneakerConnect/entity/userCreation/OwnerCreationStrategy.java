@@ -1,38 +1,28 @@
 package com.Sneaker.SneakerConnect.entity.userCreation;
 
-import com.Sneaker.SneakerConnect.entity.Shop;
 import com.Sneaker.SneakerConnect.entity.User;
 import com.Sneaker.SneakerConnect.entity.userCreation.dto.OwnerCreationDto;
-import com.Sneaker.SneakerConnect.exceptions.UserAlreadyExistsException;
-import com.Sneaker.SneakerConnect.repository.ShopRepository;
-import com.Sneaker.SneakerConnect.repository.UserRepository;
+import com.Sneaker.SneakerConnect.service.CustomUserDetailsService;
 import com.Sneaker.SneakerConnect.user.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class OwnerCreationStrategy implements UserCreationStrategy<OwnerCreationDto> {
 
     private final PasswordEncoder passwordEncoder;
-    private final UserRepository userRepository;
-    private final ShopRepository shopRepository;
-
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Override
     public User createUser(OwnerCreationDto request) {
+        List<Role> validateRoles = List.of(Role.EMPLOYEE, Role.OWNER, Role.USER);
 
-        Optional<Shop> existingShop = shopRepository.findByNameOrAddress(request.getShopName(), request.getAddress());
-        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
-
-        // franchise creation cannot be done during sign up
-        // exception will be handled by global exception controller handler
-        if(existingShop.isPresent() || existingUser.isPresent()) {
-            throw new UserAlreadyExistsException("User or shop already exists. Please choose a different name.");
-        }
+        // throws exception if user already exist for any reason
+        customUserDetailsService.validateUserForUserCreation(request.getEmail(), request.getShopName(), validateRoles);
 
         return User.builder()
                 .firstName(request.getFirstName())

@@ -28,6 +28,6 @@ public class EmployeeCreationStrategy implements UserCreationStrategy<EmployeeCr
 
     @Override
     public Role getRole() {
-        return Role.USER;
+        return Role.EMPLOYEE;
     }
 }
